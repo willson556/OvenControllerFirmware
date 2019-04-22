@@ -29,7 +29,7 @@
         },
         {
             "label": "update-compile-database",
-            "command": "compiledb --command-style --output build/compile_commands.json --parse build/compile_log.txt -n make",
+            "command": "compiledb --command-style --output build/compile_commands.json -n make",
             "type": "shell",
             "presentation": {
                 "reveal": "always"
