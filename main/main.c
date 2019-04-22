@@ -72,7 +72,6 @@ void led_notify(void* arg, void* ev_handle, bool enable)
     }
 }
 
-static bool _identifed = false;
 void* identify_read(void* arg)
 {
     return (void*)true;
