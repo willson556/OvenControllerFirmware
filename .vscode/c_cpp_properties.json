@@ -5,7 +5,11 @@
             "compileCommands": "build/compile_commands.json",
             "intelliSenseMode": "gcc-x64",
             "cStandard": "c11",
-            "cppStandard": "c++17"
+            "cppStandard": "c++17",
+            "includePath": [
+                "build/include",
+                "${env:IDF_TOOLCHAIN}/lib/gcc/xtensa-esp32-elf/5.2.0/include"
+            ]
         }
     ],
     "version": 4
