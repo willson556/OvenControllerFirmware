@@ -1,6 +1,7 @@
 # ESP
 build/
 *.old
+main/config.h
 
 # Prerequisites
 *.d

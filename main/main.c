@@ -13,6 +13,7 @@
 
 #include "hap.h"
 
+#include "config.h"
 
 
 #define TAG "SWITCH"
@@ -21,15 +22,6 @@
 #define MANUFACTURER_NAME   "YOUNGHYUN"
 #define MODEL_NAME  "ESP32_ACC"
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
-
-#if 1
-#define EXAMPLE_ESP_WIFI_SSID "unibj"
-#define EXAMPLE_ESP_WIFI_PASS "12673063"
-#endif
-#if 0
-#define EXAMPLE_ESP_WIFI_SSID "NO_RUN"
-#define EXAMPLE_ESP_WIFI_PASS "1qaz2wsx"
-#endif
 
 static gpio_num_t LED_PORT = GPIO_NUM_2;
 
@@ -149,8 +141,8 @@ void wifi_init_sta()
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .password = EXAMPLE_ESP_WIFI_PASS
+            .ssid = MAIN_WIFI_SSID,
+            .password = MAIN_WIFI_PASSWORD
         },
     };
 
@@ -160,7 +152,7 @@ void wifi_init_sta()
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
     ESP_LOGI(TAG, "connect to ap SSID:%s password:%s",
-             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+             MAIN_WIFI_SSID, MAIN_WIFI_PASSWORD);
 }
 
 void app_main()
