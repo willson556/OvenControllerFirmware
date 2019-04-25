@@ -12,15 +12,15 @@
 #include "nvs_flash.h"
 
 #include "hap.h"
-
 #include "config.h"
 
+#include "OvenController.hpp"
 
-#define TAG "SWITCH"
 
-#define ACCESSORY_NAME  "SWITCH"
-#define MANUFACTURER_NAME   "YOUNGHYUN"
-#define MODEL_NAME  "ESP32_ACC"
+#define TAG "OvenController"
+#define ACCESSORY_NAME  TAG
+#define MANUFACTURER_NAME   "WILLSON556"
+#define MODEL_NAME  "v1.1"
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 static gpio_num_t LED_PORT = GPIO_NUM_2;
@@ -140,8 +140,8 @@ void wifi_init_sta()
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = MAIN_WIFI_SSID,
-            .password = MAIN_WIFI_PASSWORD
+            {.ssid = MAIN_WIFI_SSID},
+            {.password = MAIN_WIFI_PASSWORD}
         },
     };
 
@@ -154,7 +154,7 @@ void wifi_init_sta()
              MAIN_WIFI_SSID, MAIN_WIFI_PASSWORD);
 }
 
-void app_main()
+extern "C" void app_main()
 {
     ESP_ERROR_CHECK( nvs_flash_init() );
 
