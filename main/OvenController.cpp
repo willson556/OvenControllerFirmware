@@ -3,7 +3,7 @@
 
 namespace
 {
-constexpr TickType_t button_press_delay = 100; // milliseconds
+constexpr TickType_t button_press_delay = 200; // milliseconds
 
 enum GPIOState
 {
@@ -80,7 +80,10 @@ void OvenController::resync()
 
 void OvenController::task()
 {
+    constexpr long offTickCountPreheatThreshold = pdMS_TO_TICKS(30000);
     auto sawBakeCoilOn = false;
+    long offTickStart = 0;
+    bool offTickStartCaptured = false;
 
     while (true)
     {
@@ -97,13 +100,24 @@ void OvenController::task()
         else if (bakeCoilState && currentState == State::Preheat)
         {
             sawBakeCoilOn = true;
+            offTickStartCaptured = false;
         }
         else if (!bakeCoilState && sawBakeCoilOn && currentState == State::Preheat)
         {
-            printf("Preheat finished!\n");
-            // Seems the coil went off, most likely done pre-heating.
-            // Other possibility is the user accessed the control panel.
-            setState(State::On);
+            if (!offTickStartCaptured)
+            {
+                offTickStartCaptured = true;
+                offTickStart = xTaskGetTickCount();
+            }
+            else if (xTaskGetTickCount() - offTickStart > offTickCountPreheatThreshold)
+            {
+                printf("Preheat finished!\n");
+
+                // Seems the coil went off for more than 30 seconds, most likely done pre-heating.
+                // Other possibility is the user accessed the control panel.
+                setState(State::On);
+                offTickStartCaptured = false;
+            }
         }
 
         if (targetSetpoint != currentSetpoint)
@@ -141,6 +155,7 @@ void OvenController::task()
             }
 
             printf("Turning on oven\n");
+            offTickStartCaptured = false;
             sawBakeCoilOn = false;
             pressButton(bakeButton);
 
