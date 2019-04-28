@@ -20,13 +20,44 @@
             }
         },
         {
+            "label": "build and flash",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "command": "make -j8 flash",
+            "type": "shell",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": "absolute"
+            }
+        },
+        {
+            "label": "build and flash then serial",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            // "command": "screen /dev/cu.SLAB_USBtoUART 115200 -L",
+            "command": "make monitor",
+            "type": "shell",
+            "presentation": {
+                "reveal": "always"
+            },
+            "dependsOn": "build and flash",
+            "problemMatcher": []
+        },
+        {
             "label": "update-compile-database",
             "command": "compiledb --command-style --output build/compile_commands.json -n make",
             "type": "shell",
             "presentation": {
                 "reveal": "always"
             },
-            "problemMatcher": [],
+            "problemMatcher": []
         },
         {
             "label": "clean",

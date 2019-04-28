@@ -24,6 +24,8 @@ public:
         Off, Preheat, On
     };
 
+    typedef void (*StateChangedHandler)(State newState);
+
     OvenController(
         gpio_num_t bakeButton,
         gpio_num_t startButton,
@@ -31,7 +33,8 @@ public:
         gpio_num_t decrementButton,
         gpio_num_t cancelButton,
         gpio_num_t bakeCoilSense,
-        const char *name)
+        const char *name,
+        StateChangedHandler stateChangedHandler)
         : bakeButton{bakeButton},
           startButton{startButton},
           incrementButton{incrementButton},
@@ -39,7 +42,8 @@ public:
           cancelButton{cancelButton},
           buttons{bakeButton, startButton, incrementButton, decrementButton, cancelButton},
           bakeCoilSense{bakeCoilSense},
-          name{name}
+          name{name},
+          stateChangedHandler{stateChangedHandler}
     {   
     }
 
@@ -73,14 +77,29 @@ public:
 
     friend void OvenControllerInternals::ovenTask(void *pvParameters);
 
+    int getMaxTemperatureInFahrenheit() { return MaxTemperature; }
+    int getMaxTemperatureInCelsius() { return FahrenheitToCelsius(MaxTemperature); }
+    int getMinTemperatureInFahrenheit() { return MinTemperature; }
+    int getMinTemperatureInCelsius() { return FahrenheitToCelsius(MinTemperature); }
 
 private:
+    void setState(State newState)
+    {
+        currentState = newState;
+        stateChanged = true;
+    }
+
     void task();
     TaskHandle_t taskHandle{nullptr};
 
-    int currentSetpoint {350};
-    State currentState {State::Off};
-
+    volatile int currentSetpoint {350}; // degF
+    volatile int targetSetpoint {350}; // degF
+    volatile State currentState {State::Off};
+    
+    volatile bool turnOnRequest {false};
+    volatile bool turnOffRequest {false};
+    volatile bool stateChanged {false};
+    
     static constexpr size_t num_buttons = 5;
     const gpio_num_t bakeButton;
     const gpio_num_t startButton;
@@ -92,4 +111,8 @@ private:
 
     const gpio_num_t bakeCoilSense;
     const char* name;
+    const StateChangedHandler stateChangedHandler;
+
+    static constexpr int MaxTemperature = 500; // degF
+    static constexpr int MinTemperature = 200; // degF
 };
