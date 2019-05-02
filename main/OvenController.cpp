@@ -93,9 +93,9 @@ void OvenController::task()
 
         if (bakeCoilState && currentState == State::Off)
         {
-            printf("Oven turned on by person!\n");
-            setState(State::Preheat);             // Someone must have manually operated the oven.
-            currentSetpoint = defaultTemperature; // We don't really know the temperature but we'll put something in.
+            printf("Oven turned on by person!\n");  // Someone must have manually operated the oven.
+            targetSetpoint = currentSetpoint = defaultTemperature; // We don't really know the temperature but we'll put something in.
+            setState(State::Preheat);
         }
         else if (bakeCoilState && currentState == State::Preheat)
         {
