@@ -14,6 +14,8 @@
 #include "hap.h"
 #include "config.h"
 
+#include "udp_logging.h"
+
 #include "OvenController.hpp"
 
 
@@ -216,6 +218,10 @@ void hap_object_init(void* arg)
     hap_service_and_characteristics_ex_add(a, accessory_object, HAP_SERVICE_THERMOSTAT, state, ARRAY_SIZE(state));
 }
 
+static void network_logging_init()
+{
+    udp_logging_init(CONFIG_LOG_UDP_IP, CONFIG_LOG_UDP_PORT, udp_logging_vprintf);
+}
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -228,6 +234,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
                  ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
         {
+            network_logging_init();
             hap_init();
 
             uint8_t mac[6];
