@@ -2,6 +2,12 @@
 #include "hap.h"
 #include "config.h"
 
+#define TAG "OvenHAP"
+#define ACCESSORY_NAME  "Oven"
+#define MANUFACTURER_NAME   "TEW"
+#define MODEL_NAME  "v1.1"
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+
 constexpr int OvenOffTemperature = 20; // degC
 
 /* The event group allows multiple bits for each event,
@@ -35,12 +41,12 @@ void hap_oven_initialize(OvenController &o, uint8_t *mac)
     a = hap_accessory_register((char *)ACCESSORY_NAME, accessory_id, (char *)"053-58-198", (char *)MANUFACTURER_NAME, HAP_ACCESSORY_CATEGORY_OTHER, 812, HOMEKIT_CONFIG_NUMBER, NULL, &callback);
 }
 
-void *intToFloatVoidPtr(float value)
+void *floatToIntVoidPtr(float value)
 {
     return (void *)(int)(value * 100.0); // This casts the floating point format data to a void*.
 }
 
-float floatVoidPtrToInt(void *ptr)
+float intVoidPtrToFloat(void *ptr)
 {
     return ((int)ptr) / 100.0; // This converts the int to float.
 }
@@ -111,12 +117,12 @@ void *getCurrentTemperature(void *arg)
     switch (ovenController->getCurrentState())
     {
     case OvenController::State::Off:
-        return intToFloatVoidPtr(OvenOffTemperature);
+        return floatToIntVoidPtr(OvenOffTemperature);
     case OvenController::State::Preheat:
-        return intToFloatVoidPtr(ovenController->getTemperatureInCelsius() / 2);
+        return floatToIntVoidPtr(ovenController->getTemperatureInCelsius() / 2);
     case OvenController::State::On:
     default:
-        return intToFloatVoidPtr(ovenController->getTemperatureInCelsius());
+        return floatToIntVoidPtr(ovenController->getTemperatureInCelsius());
     }
 }
 
@@ -127,12 +133,12 @@ void setCurrentTemperatureEventHandle(void *arg, void *ev_handle, bool enable)
 
 void *getTargetTemperature(void *arg)
 {
-    return intToFloatVoidPtr(ovenController->getTemperatureInCelsius());
+    return floatToIntVoidPtr(ovenController->getTemperatureInCelsius());
 }
 
 void setTargetTemperature(void *arg, void *value, int len)
 {
-    auto temperature = floatVoidPtrToInt(value);
+    auto temperature = intVoidPtrToFloat(value);
     ovenController->setTemperatureCelsius(temperature);
 
     if (target_temperature_event_handle)
@@ -202,12 +208,69 @@ void hap_object_init(void *arg)
     };
     hap_service_and_characteristics_add(a, accessory_object, HAP_SERVICE_ACCESSORY_INFORMATION, cs, ARRAY_SIZE(cs));
 
+    int target_heating_cooling_state_valid_values[] = {0, 1};
+
     struct hap_characteristic_ex state[] = {
-        {HAP_CHARACTER_CURRENT_HEATING_COOLING_STATE, getCurrentHeatingCoolingState(nullptr), nullptr, getCurrentHeatingCoolingState, nullptr, setCurrentHeatingCoolingStateEventHandle, false, nullptr, false, nullptr, false, nullptr},
-        {HAP_CHARACTER_TARGET_HEATING_COOLING_STATE, getCurrentHeatingCoolingState(nullptr), nullptr, getCurrentHeatingCoolingState, setTargetHeatingCoolingState, setTargetHeatingCoolingStateEventHandle, false, nullptr, false, nullptr, false, nullptr},
-        {HAP_CHARACTER_CURRENT_TEMPERATURE, getCurrentTemperature(nullptr), nullptr, getCurrentTemperature, nullptr, setCurrentTemperatureEventHandle, true, intToFloatVoidPtr(ovenController->getMaxTemperatureInCelsius()), true, intToFloatVoidPtr(OvenOffTemperature), false, nullptr},
-        {HAP_CHARACTER_TARGET_TEMPERATURE, getTargetTemperature(nullptr), nullptr, getTargetTemperature, setTargetTemperature, setTargetTemperatureEventHandle, true, intToFloatVoidPtr(ovenController->getMaxTemperatureInCelsius()), true, intToFloatVoidPtr(ovenController->getMinTemperatureInCelsius()), false, nullptr},
-        {HAP_CHARACTER_TEMPERATURE_DISPLAY_UNITS, getDisplayUnits(nullptr), nullptr, getDisplayUnits, setDisplayUnits, setDisplayUnitsEventHandle, false, nullptr, false, nullptr, false, nullptr},
+        {
+            HAP_CHARACTER_CURRENT_HEATING_COOLING_STATE,
+            getCurrentHeatingCoolingState(nullptr),
+            nullptr,
+            getCurrentHeatingCoolingState,
+            nullptr,
+            setCurrentHeatingCoolingStateEventHandle,
+            false, nullptr,
+            false, (void*)1,
+            false, nullptr,
+            false, 0, nullptr,
+        },
+        {
+            HAP_CHARACTER_TARGET_HEATING_COOLING_STATE,
+            getCurrentHeatingCoolingState(nullptr),
+            nullptr,
+            getCurrentHeatingCoolingState,
+            setTargetHeatingCoolingState,
+            setTargetHeatingCoolingStateEventHandle,
+            false, nullptr,
+            false, (void*)1,
+            false, nullptr,
+            true, ARRAY_SIZE(target_heating_cooling_state_valid_values), target_heating_cooling_state_valid_values,
+        },
+        {
+            HAP_CHARACTER_CURRENT_TEMPERATURE,
+            getCurrentTemperature(nullptr),
+            nullptr,
+            getCurrentTemperature,
+            nullptr,
+            setCurrentTemperatureEventHandle,
+            true, floatToIntVoidPtr(ovenController->getMaxTemperatureInCelsius()),
+            true, floatToIntVoidPtr(OvenOffTemperature),
+            false, nullptr,
+            false, 0, nullptr,
+        },
+        {
+            HAP_CHARACTER_TARGET_TEMPERATURE,
+            getTargetTemperature(nullptr), 
+            nullptr,
+            getTargetTemperature,
+            setTargetTemperature,
+            setTargetTemperatureEventHandle,
+            true, floatToIntVoidPtr(ovenController->getMaxTemperatureInCelsius()),
+            true, floatToIntVoidPtr(ovenController->getMinTemperatureInCelsius()),
+            false, nullptr,
+            false, 0, nullptr,
+        },
+        {
+            HAP_CHARACTER_TEMPERATURE_DISPLAY_UNITS,
+            getDisplayUnits(nullptr),
+            nullptr,
+            getDisplayUnits,
+            setDisplayUnits,
+            setDisplayUnitsEventHandle,
+            false, nullptr,
+            false, nullptr,
+            false, nullptr,
+            false, 0, nullptr,
+        },
     };
     hap_service_and_characteristics_ex_add(a, accessory_object, HAP_SERVICE_THERMOSTAT, state, ARRAY_SIZE(state));
 }

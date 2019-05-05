@@ -20,6 +20,8 @@
 
 #include "ota.hpp"
 
+#define TAG "Main"
+
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED_BIT = BIT0;
