@@ -53,17 +53,17 @@ public:
      */
     void initialize();
 
-    void setTemperatureFahrenheit(int f);
+    void setTemperatureFahrenheit(float f);
     
-    void setTemperatureCelsius(int c) {
+    void setTemperatureCelsius(float c) {
         setTemperatureFahrenheit(CelsiusToFahrenheit(c));
     }
 
-    int getTemperatureInCelsius() {
+    float getTemperatureInCelsius() {
         return FahrenheitToCelsius(currentSetpoint);
     }
 
-    int getTemperatureInFahrenheit() {
+    float getTemperatureInFahrenheit() {
         return currentSetpoint;
     }
 
@@ -77,10 +77,12 @@ public:
 
     friend void OvenControllerInternals::ovenTask(void *pvParameters);
 
-    int getMaxTemperatureInFahrenheit() { return MaxTemperature; }
-    int getMaxTemperatureInCelsius() { return FahrenheitToCelsius(MaxTemperature); }
-    int getMinTemperatureInFahrenheit() { return MinTemperature; }
-    int getMinTemperatureInCelsius() { return FahrenheitToCelsius(MinTemperature); }
+    float getMaxTemperatureInFahrenheit() { return MaxTemperature; }
+    float getMaxTemperatureInCelsius() { return FahrenheitToCelsius(MaxTemperature); }
+    float getMinTemperatureInFahrenheit() { return MinTemperature; }
+    float getMinTemperatureInCelsius() { return FahrenheitToCelsius(MinTemperature); }
+    float getTemperatureStepSizeInFahrenheit() { return TemperatureStepSize; }
+    float getTemperatureStepSizeInCelsius() { return FahrenheitToCelsius(TemperatureStepSize); }
 
 private:
     void setState(State newState)
@@ -92,8 +94,8 @@ private:
     void task();
     TaskHandle_t taskHandle{nullptr};
 
-    volatile int currentSetpoint {350}; // degF
-    volatile int targetSetpoint {350}; // degF
+    volatile float currentSetpoint {350}; // degF
+    volatile float targetSetpoint {350}; // degF
     volatile State currentState {State::Off};
     
     volatile bool turnOnRequest {false};
@@ -113,6 +115,7 @@ private:
     const char* name;
     const StateChangedHandler stateChangedHandler;
 
-    static constexpr int MaxTemperature = 500; // degF
-    static constexpr int MinTemperature = 200; // degF
+    static constexpr float MaxTemperature = 500; // degF
+    static constexpr float MinTemperature = 200; // degF
+    static constexpr float TemperatureStepSize = 5; //degF
 };

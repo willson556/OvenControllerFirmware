@@ -18,6 +18,8 @@
 #include "OvenController.hpp"
 #include "OvenControllerHomeKitBridge.hpp"
 
+#include "ota.hpp"
+
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED_BIT = BIT0;
@@ -30,6 +32,7 @@ constexpr gpio_num_t cancelButton = GPIO_NUM_33;
 constexpr gpio_num_t bakeCoilSense = GPIO_NUM_5;
 
 static OvenController ovenController { bakeButton, startButton, incrementButton, decrementButton, cancelButton, bakeCoilSense, "OvenController", hap_oven_StateChangedHandler };
+static HttpsOta::Ota ota { MAIN_UPDATE_FEED_URL, CURRENT_VERSION, [](){ ovenController.turnOff(); }};
 
 static void network_logging_init()
 {
@@ -52,6 +55,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             esp_wifi_get_mac(ESP_IF_WIFI_STA, mac);
 
             hap_oven_initialize(ovenController, mac);
+            ota.launchTask();
         }
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:

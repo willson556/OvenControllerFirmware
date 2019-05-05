@@ -1,5 +1,6 @@
 #include "OvenControllerHomeKitBridge.hpp"
 #include "hap.h"
+#include "config.h"
 
 constexpr int OvenOffTemperature = 20; // degC
 
@@ -31,17 +32,17 @@ void hap_oven_initialize(OvenController &o, uint8_t *mac)
     hap_accessory_callback_t callback;
     callback.hap_object_init = hap_object_init;
 
-    a = hap_accessory_register((char *)ACCESSORY_NAME, accessory_id, (char *)"053-58-198", (char *)MANUFACTURER_NAME, HAP_ACCESSORY_CATEGORY_OTHER, 812, 1, NULL, &callback);
+    a = hap_accessory_register((char *)ACCESSORY_NAME, accessory_id, (char *)"053-58-198", (char *)MANUFACTURER_NAME, HAP_ACCESSORY_CATEGORY_OTHER, 812, HOMEKIT_CONFIG_NUMBER, NULL, &callback);
 }
 
-void *intToFloatVoidPtr(int value)
+void *intToFloatVoidPtr(float value)
 {
-    return (void *)(value * 100); // This casts the floating point format data to a void*.
+    return (void *)(int)(value * 100.0); // This casts the floating point format data to a void*.
 }
 
-int floatVoidPtrToInt(void *ptr)
+float floatVoidPtrToInt(void *ptr)
 {
-    return ((int)ptr) / 100; // This converts the float to int.
+    return ((int)ptr) / 100.0; // This converts the int to float.
 }
 
 void *getCurrentHeatingCoolingState(void *arg)
@@ -197,16 +198,16 @@ void hap_object_init(void *arg)
         {HAP_CHARACTER_MODEL, (void *)MODEL_NAME, NULL, NULL, NULL, NULL},
         {HAP_CHARACTER_NAME, (void *)ACCESSORY_NAME, NULL, NULL, NULL, NULL},
         {HAP_CHARACTER_SERIAL_NUMBER, (void *)"8548851", NULL, NULL, NULL, NULL},
-        {HAP_CHARACTER_FIRMWARE_REVISION, (void *)"1.0", NULL, NULL, NULL, NULL},
+        {HAP_CHARACTER_FIRMWARE_REVISION, (void *)CURRENT_VERSION, NULL, NULL, NULL, NULL},
     };
     hap_service_and_characteristics_add(a, accessory_object, HAP_SERVICE_ACCESSORY_INFORMATION, cs, ARRAY_SIZE(cs));
 
     struct hap_characteristic_ex state[] = {
-        {HAP_CHARACTER_CURRENT_HEATING_COOLING_STATE, getCurrentHeatingCoolingState(nullptr), nullptr, getCurrentHeatingCoolingState, nullptr, setCurrentHeatingCoolingStateEventHandle, false, nullptr, false, nullptr},
-        {HAP_CHARACTER_TARGET_HEATING_COOLING_STATE, getCurrentHeatingCoolingState(nullptr), nullptr, getCurrentHeatingCoolingState, setTargetHeatingCoolingState, setTargetHeatingCoolingStateEventHandle, false, nullptr, false, nullptr},
-        {HAP_CHARACTER_CURRENT_TEMPERATURE, getCurrentTemperature(nullptr), nullptr, getCurrentTemperature, nullptr, setCurrentTemperatureEventHandle, true, intToFloatVoidPtr(ovenController->getMaxTemperatureInCelsius()), true, intToFloatVoidPtr(OvenOffTemperature)},
-        {HAP_CHARACTER_TARGET_TEMPERATURE, getTargetTemperature(nullptr), nullptr, getTargetTemperature, setTargetTemperature, setTargetTemperatureEventHandle, true, intToFloatVoidPtr(ovenController->getMaxTemperatureInCelsius()), true, intToFloatVoidPtr(ovenController->getMinTemperatureInCelsius())},
-        {HAP_CHARACTER_TEMPERATURE_DISPLAY_UNITS, getDisplayUnits(nullptr), nullptr, getDisplayUnits, setDisplayUnits, setDisplayUnitsEventHandle, false, nullptr, false, nullptr},
+        {HAP_CHARACTER_CURRENT_HEATING_COOLING_STATE, getCurrentHeatingCoolingState(nullptr), nullptr, getCurrentHeatingCoolingState, nullptr, setCurrentHeatingCoolingStateEventHandle, false, nullptr, false, nullptr, false, nullptr},
+        {HAP_CHARACTER_TARGET_HEATING_COOLING_STATE, getCurrentHeatingCoolingState(nullptr), nullptr, getCurrentHeatingCoolingState, setTargetHeatingCoolingState, setTargetHeatingCoolingStateEventHandle, false, nullptr, false, nullptr, false, nullptr},
+        {HAP_CHARACTER_CURRENT_TEMPERATURE, getCurrentTemperature(nullptr), nullptr, getCurrentTemperature, nullptr, setCurrentTemperatureEventHandle, true, intToFloatVoidPtr(ovenController->getMaxTemperatureInCelsius()), true, intToFloatVoidPtr(OvenOffTemperature), false, nullptr},
+        {HAP_CHARACTER_TARGET_TEMPERATURE, getTargetTemperature(nullptr), nullptr, getTargetTemperature, setTargetTemperature, setTargetTemperatureEventHandle, true, intToFloatVoidPtr(ovenController->getMaxTemperatureInCelsius()), true, intToFloatVoidPtr(ovenController->getMinTemperatureInCelsius()), false, nullptr},
+        {HAP_CHARACTER_TEMPERATURE_DISPLAY_UNITS, getDisplayUnits(nullptr), nullptr, getDisplayUnits, setDisplayUnits, setDisplayUnitsEventHandle, false, nullptr, false, nullptr, false, nullptr},
     };
     hap_service_and_characteristics_ex_add(a, accessory_object, HAP_SERVICE_THERMOSTAT, state, ARRAY_SIZE(state));
 }

@@ -4,6 +4,6 @@
 [submodule "components/udp-logging"]
 	path = components/udp-logging
 	url = git@github.com:willson556/embedded-esp32-component-udp_logging.git
-[submodule "components/mongoose"]
-	path = components/mongoose
-	url = git@github.com:willson556/mongoose_espidf.git
+[submodule "components/ota"]
+	path = components/ota
+	url = git@github.com:willson556/esp32-https-ota.git

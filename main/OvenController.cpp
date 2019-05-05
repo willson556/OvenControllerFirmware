@@ -16,14 +16,14 @@ enum GPIOState
 };
 
 template <TickType_t milliseconds>
-void delay()
+static void delay()
 {
     vTaskDelay(milliseconds / portTICK_PERIOD_MS);
 }
 
 void pressButton(gpio_num_t button)
 {
-    printf("Push button %d\n", button);
+    ESP_LOGD(TAG, "Push button %d\n", button);
     gpio_set_level(button, ON);
     delay<button_press_delay>();
     gpio_set_level(button, OFF);
@@ -31,15 +31,15 @@ void pressButton(gpio_num_t button)
 }
 } // namespace
 
-constexpr int defaultTemperature = 350;
-constexpr int stepSize = 5;
+constexpr float defaultTemperature = 350;
+constexpr float stepSize = 5;
 
 void OvenControllerInternals::ovenTask(void *pvParameters)
 {
     static_cast<OvenController *>(pvParameters)->task();
 }
 
-void OvenController::setTemperatureFahrenheit(int f)
+void OvenController::setTemperatureFahrenheit(float f)
 {
     targetSetpoint = f;
 }
@@ -96,7 +96,7 @@ void OvenController::task()
 
         if (bakeCoilState && currentState == State::Off)
         {
-            printf("Oven turned on by person!\n");  // Someone must have manually operated the oven.
+            ESP_LOGD(TAG, "Oven turned on by person!\n");  // Someone must have manually operated the oven.
             targetSetpoint = currentSetpoint = defaultTemperature; // We don't really know the temperature but we'll put something in.
             setState(State::Preheat);
         }
@@ -114,10 +114,10 @@ void OvenController::task()
             }
             else if (xTaskGetTickCount() - offTickStart > offTickCountPreheatThreshold)
             {
-                printf("Preheat finished!\n");
+                ESP_LOGD(TAG, "Preheat finished!\n");
 
                 // Seems the coil went off for more than 30 seconds, most likely done pre-heating.
-                // Other possibility is the user accessed the control panel.
+                // Other possibility is the user accessed thecontrol panel.
                 setState(State::On);
                 offTickStartCaptured = false;
             }
@@ -125,7 +125,7 @@ void OvenController::task()
 
         if (targetSetpoint != currentSetpoint)
         {
-            printf("New setpoint of %dF\n", targetSetpoint);
+            ESP_LOGD(TAG, "New setpoint of %fF\n", targetSetpoint);
             currentSetpoint = targetSetpoint;
 
             switch (currentState)
@@ -143,7 +143,7 @@ void OvenController::task()
 
         if (turnOffRequest)
         {
-            printf("Turning off oven\n");
+            ESP_LOGD(TAG, "Turning off oven\n");
             pressButton(cancelButton);
             turnOffRequest = false;
             setState(State::Off);
@@ -157,21 +157,21 @@ void OvenController::task()
                 return;
             }
 
-            printf("Turning on oven\n");
+            ESP_LOGD(TAG, "Turning on oven\n");
             offTickStartCaptured = false;
             sawBakeCoilOn = false;
             pressButton(bakeButton);
 
             if (currentSetpoint > defaultTemperature)
             {
-                for (int ovenSetpoint = defaultTemperature; ovenSetpoint < currentSetpoint; ovenSetpoint += stepSize)
+                for (float ovenSetpoint = defaultTemperature; ovenSetpoint < currentSetpoint - stepSize / 2.0; ovenSetpoint += stepSize)
                 {
                     pressButton(incrementButton);
                 }
             }
             else if (currentSetpoint < defaultTemperature)
             {
-                for (int ovenSetpoint = defaultTemperature; ovenSetpoint > currentSetpoint; ovenSetpoint -= stepSize)
+                for (float ovenSetpoint = defaultTemperature; ovenSetpoint > currentSetpoint + stepSize / 2.0; ovenSetpoint -= stepSize)
                 {
                     pressButton(decrementButton);
                 }
