@@ -1,8 +1,12 @@
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+#include "esp_log.h"
 
 #include "OvenController.hpp"
 
 namespace
 {
+
+static const char* TAG = "OvenController";
 constexpr TickType_t button_press_delay = 200; // milliseconds
 
 enum GPIOState
@@ -84,12 +88,11 @@ void OvenController::task()
     auto sawBakeCoilOn = false;
     long offTickStart = 0;
     bool offTickStartCaptured = false;
+    int memoryCountDivider = 0;
 
     while (true)
     {
         auto bakeCoilState = !gpio_get_level(bakeCoilSense);
-        printf("Bake Coil Sense State: %d\n", bakeCoilState);
-        printf("Current State: %d\n", (int)currentState);
 
         if (bakeCoilState && currentState == State::Off)
         {
@@ -188,6 +191,10 @@ void OvenController::task()
             {
                 stateChangedHandler(currentState);
             }
+        }
+
+        if ((memoryCountDivider++ % 60) == 0) {
+            ESP_LOGI(TAG, "Available Memory: %d\n", xPortGetFreeHeapSize());
         }
 
         delay<1000>();
