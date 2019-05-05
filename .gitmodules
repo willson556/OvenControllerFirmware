@@ -6,4 +6,4 @@
 	url = git@github.com:willson556/embedded-esp32-component-udp_logging.git
 [submodule "components/mongoose"]
 	path = components/mongoose
-	url = git@github.com:infincia/mongoose_espidf.git
+	url = git@github.com:willson556/mongoose_espidf.git
