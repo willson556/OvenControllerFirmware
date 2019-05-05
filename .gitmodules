@@ -1,6 +1,6 @@
 [submodule "components/homekit"]
 	path = components/homekit
-	url = https://github.com/willson556/esp32-homekit.git
+	url = git@github.com:willson556/esp32-homekit.git
 [submodule "components/udp-logging"]
 	path = components/udp-logging
 	url = git@github.com:willson556/embedded-esp32-component-udp_logging.git
