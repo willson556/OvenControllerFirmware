@@ -6,4 +6,4 @@
 	url = git@github.com:willson556/embedded-esp32-component-udp_logging.git
 [submodule "components/ota"]
 	path = components/ota
-	url = git@github.com:willson556/esp32-https-ota.git
+	url = git@github.com:willson556/esp32-simple-ota.git

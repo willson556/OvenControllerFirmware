@@ -18,7 +18,7 @@
 #include "OvenController.hpp"
 #include "OvenControllerHomeKitBridge.hpp"
 
-#include "ota.hpp"
+#include "esp32_simple_ota.hpp"
 
 #define TAG "Main"
 
@@ -33,8 +33,25 @@ constexpr gpio_num_t decrementButton = GPIO_NUM_32;
 constexpr gpio_num_t cancelButton = GPIO_NUM_33;
 constexpr gpio_num_t bakeCoilSense = GPIO_NUM_5;
 
-static OvenController ovenController { bakeButton, startButton, incrementButton, decrementButton, cancelButton, bakeCoilSense, "OvenController", hap_oven_StateChangedHandler };
-static HttpsOta::Ota ota { MAIN_UPDATE_FEED_URL, CURRENT_VERSION, [](){ ovenController.turnOff(); }};
+static OvenController ovenController {
+    bakeButton,
+    startButton,
+    incrementButton,
+    decrementButton,
+    cancelButton,
+    bakeCoilSense,
+    "OvenController",
+    hap_oven_StateChangedHandler
+};
+
+constexpr unsigned updateInterval = 60; // seconds
+static esp32_simple_ota::OTAManager ota {
+    MAIN_UPDATE_FEED_URL,
+    CURRENT_VERSION,
+    updateInterval,
+    [](){ ovenController.turnOff(); },
+    [](){ return ovenController.getCurrentState() == OvenController::State::Off; }
+};
 
 static void network_logging_init()
 {
