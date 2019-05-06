@@ -6,7 +6,7 @@
 namespace
 {
 
-static const char* TAG = "OvenController";
+const char* TAG = "OvenController";
 constexpr TickType_t button_press_delay = 200; // milliseconds
 
 enum GPIOState
@@ -16,7 +16,7 @@ enum GPIOState
 };
 
 template <TickType_t milliseconds>
-static void delay()
+void delay()
 {
     vTaskDelay(milliseconds / portTICK_PERIOD_MS);
 }
@@ -85,7 +85,7 @@ void OvenController::resync()
 void OvenController::task()
 {
     constexpr long offTickCountPreheatThreshold = pdMS_TO_TICKS(30000);
-    auto sawBakeCoilOn = false;
+    constexpr long offTickCountTurnOffThreshold = pdMS_TO_TICKS(10 * 60 * 1000);
     long offTickStart = 0;
     bool offTickStartCaptured = false;
     int memoryCountDivider = 0;
@@ -94,33 +94,46 @@ void OvenController::task()
     {
         auto bakeCoilState = !gpio_get_level(bakeCoilSense);
 
-        if (bakeCoilState && currentState == State::Off)
-        {
-            ESP_LOGD(TAG, "Oven turned on by person!\n");  // Someone must have manually operated the oven.
-            targetSetpoint = currentSetpoint = defaultTemperature; // We don't really know the temperature but we'll put something in.
-            setState(State::Preheat);
-        }
-        else if (bakeCoilState && currentState == State::Preheat)
-        {
-            sawBakeCoilOn = true;
+       if (!bakeCoilState && !offTickStartCaptured) {
+            offTickStart = xTaskGetTickCount();
+            offTickStartCaptured = true;
+        } else if (bakeCoilState && offTickStartCaptured) {
             offTickStartCaptured = false;
         }
-        else if (!bakeCoilState && sawBakeCoilOn && currentState == State::Preheat)
-        {
-            if (!offTickStartCaptured)
-            {
-                offTickStartCaptured = true;
-                offTickStart = xTaskGetTickCount();
-            }
-            else if (xTaskGetTickCount() - offTickStart > offTickCountPreheatThreshold)
-            {
-                ESP_LOGD(TAG, "Preheat finished!\n");
 
-                // Seems the coil went off for more than 30 seconds, most likely done pre-heating.
-                // Other possibility is the user accessed thecontrol panel.
-                setState(State::On);
-                offTickStartCaptured = false;
-            }
+        auto offTime = bakeCoilState ? 0 : xTaskGetTickCount() - offTickStart;
+
+        switch(currentState)
+        {
+            case State::Off:
+                if (bakeCoilState) {
+                    ESP_LOGD(TAG, "Oven turned on by person! Jumping to preheating state.");
+                    targetSetpoint = currentSetpoint = defaultTemperature; // We don't really know the temperature but we'll put something in.
+                    setState(State::Preheating);
+                }
+                break;
+            case State::BeginPreheat:
+                if (bakeCoilState) {
+                    ESP_LOGD(TAG, "Oven bake coil has turned on, entering preheating state.");
+                    setState(State::Preheating);
+                }
+                break;
+            case State::Preheating:
+                if (offTime > offTickCountPreheatThreshold) {
+                    ESP_LOGD(TAG,
+                             "Bake coil has been off for %u seconds, assuming preheat done.",
+                             (unsigned)(offTickCountPreheatThreshold / configTICK_RATE_HZ));
+                    setState(State::On);
+                }
+                break;
+            case State::On:
+                if (offTime > offTickCountTurnOffThreshold) {
+                    ESP_LOGD(TAG,
+                             "Bake coil has been off for %u seconds, assuming someone turned off the oven.",
+                             (unsigned)(offTickCountTurnOffThreshold / configTICK_RATE_HZ));
+                    setState(State::Off);
+                }
+                break;
         }
 
         if (targetSetpoint != currentSetpoint)
@@ -130,13 +143,13 @@ void OvenController::task()
 
             switch (currentState)
             {
+            case State::Off:
+                break;
             case State::On:
-            case State::Preheat:
+            case State::BeginPreheat:
+            case State::Preheating:
                 turnOff();
                 turnOn();
-                break;
-            case State::Off:
-            default:
                 break;
             }
         }
@@ -151,15 +164,13 @@ void OvenController::task()
 
         if (turnOnRequest)
         {
-            if (currentState == State::On || currentState == State::Preheat)
+            if (currentState != State::Off)
             {
                 turnOnRequest = false;
                 return;
             }
 
             ESP_LOGD(TAG, "Turning on oven\n");
-            offTickStartCaptured = false;
-            sawBakeCoilOn = false;
             pressButton(bakeButton);
 
             if (currentSetpoint > defaultTemperature)
@@ -180,7 +191,7 @@ void OvenController::task()
             pressButton(startButton);
 
             turnOnRequest = false;
-            setState(State::Preheat);
+            setState(State::BeginPreheat);
         }
 
         if (stateChanged)

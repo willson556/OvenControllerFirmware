@@ -21,7 +21,7 @@ namespace OvenControllerInternals {
 class OvenController {
 public:
     enum class State {
-        Off, Preheat, On
+        Off, BeginPreheat, Preheating, On
     };
 
     typedef void (*StateChangedHandler)(State newState);

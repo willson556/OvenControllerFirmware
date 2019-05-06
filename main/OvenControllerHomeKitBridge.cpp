@@ -31,14 +31,23 @@ void hap_oven_initialize(OvenController &o, uint8_t *mac)
     ovenController = &o;
     hap_init();
 
-    char accessory_id[32] = {
+    constexpr size_t id_buffer_size = 32;
+    char accessory_id[id_buffer_size] = {
         0,
     };
-    sprintf(accessory_id, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    snprintf(accessory_id, id_buffer_size, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     hap_accessory_callback_t callback;
     callback.hap_object_init = hap_object_init;
 
-    a = hap_accessory_register((char *)ACCESSORY_NAME, accessory_id, (char *)"053-58-198", (char *)MANUFACTURER_NAME, HAP_ACCESSORY_CATEGORY_OTHER, 812, HOMEKIT_CONFIG_NUMBER, NULL, &callback);
+    a = hap_accessory_register(ACCESSORY_NAME,
+                               accessory_id,
+                               "053-58-198",
+                               MANUFACTURER_NAME,
+                               HAP_ACCESSORY_CATEGORY_OTHER,
+                               812,
+                               HOMEKIT_CONFIG_NUMBER,
+                               NULL,
+                               &callback);
 }
 
 void *floatToIntVoidPtr(float value)
@@ -56,7 +65,8 @@ void *getCurrentHeatingCoolingState(void *arg)
     switch (ovenController->getCurrentState())
     {
     case OvenController::State::On:
-    case OvenController::State::Preheat:
+    case OvenController::State::BeginPreheat:
+    case OvenController::State::Preheating:
         return (void *)1;
     case OvenController::State::Off:
     default:
@@ -118,7 +128,8 @@ void *getCurrentTemperature(void *arg)
     {
     case OvenController::State::Off:
         return floatToIntVoidPtr(OvenOffTemperature);
-    case OvenController::State::Preheat:
+    case OvenController::State::BeginPreheat:
+    case OvenController::State::Preheating:
         return floatToIntVoidPtr(ovenController->getTemperatureInCelsius() / 2);
     case OvenController::State::On:
     default:
