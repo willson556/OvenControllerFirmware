@@ -89,10 +89,19 @@ void OvenController::task()
     long offTickStart = 0;
     bool offTickStartCaptured = false;
     int memoryCountDivider = 0;
+    bool lastBakeCoilState = getHeatingElementState();
 
     while (true)
     {
-        auto bakeCoilState = !gpio_get_level(bakeCoilSense);
+        auto bakeCoilState = getHeatingElementState();
+
+        if (bakeCoilState != lastBakeCoilState) {
+            lastBakeCoilState = bakeCoilState;
+
+            for (auto &listener : heatingElementStateListeners) {
+                if (listener) listener(bakeCoilState);
+            }
+        }
 
        if (!bakeCoilState && !offTickStartCaptured) {
             offTickStart = xTaskGetTickCount();
@@ -198,9 +207,8 @@ void OvenController::task()
         {
             stateChanged = false;
 
-            if (stateChangedHandler)
-            {
-                stateChangedHandler(currentState);
+            for (auto listener: stateListeners) {
+                if (listener) listener(currentState);
             }
         }
 

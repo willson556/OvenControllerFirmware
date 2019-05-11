@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <functional>
+#include <vector>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -24,8 +26,6 @@ public:
         Off, BeginPreheat, Preheating, On
     };
 
-    typedef void (*StateChangedHandler)(State newState);
-
     OvenController(
         gpio_num_t bakeButton,
         gpio_num_t startButton,
@@ -33,8 +33,7 @@ public:
         gpio_num_t decrementButton,
         gpio_num_t cancelButton,
         gpio_num_t bakeCoilSense,
-        const char *name,
-        StateChangedHandler stateChangedHandler)
+        const char *name)
         : bakeButton{bakeButton},
           startButton{startButton},
           incrementButton{incrementButton},
@@ -42,8 +41,7 @@ public:
           cancelButton{cancelButton},
           buttons{bakeButton, startButton, incrementButton, decrementButton, cancelButton},
           bakeCoilSense{bakeCoilSense},
-          name{name},
-          stateChangedHandler{stateChangedHandler}
+          name{name}
     {   
     }
 
@@ -52,6 +50,14 @@ public:
      * 
      */
     void initialize();
+
+    void addStateListener(std::function<void(State)> listener) {
+        stateListeners.push_back(listener);
+    }
+
+    void addHeatingElementListener(std::function<void(bool)> listener) {
+        heatingElementStateListeners.push_back(listener);
+    }
 
     void setTemperatureFahrenheit(float f);
     
@@ -69,6 +75,10 @@ public:
 
     State getCurrentState() {
         return currentState;
+    }
+
+    bool getHeatingElementState() {
+        return !gpio_get_level(bakeCoilSense);
     }
 
     void turnOn();
@@ -113,7 +123,8 @@ private:
 
     const gpio_num_t bakeCoilSense;
     const char* name;
-    const StateChangedHandler stateChangedHandler;
+    std::vector<std::function<void(State)>> stateListeners {};
+    std::vector<std::function<void(bool)>> heatingElementStateListeners {};
 
     static constexpr float MaxTemperature = 500; // degF
     static constexpr float MinTemperature = 200; // degF

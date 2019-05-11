@@ -40,11 +40,10 @@ static OvenController ovenController {
     decrementButton,
     cancelButton,
     bakeCoilSense,
-    "OvenController",
-    hap_oven_StateChangedHandler
+    "OvenController"
 };
 
-constexpr unsigned updateInterval = 60; // seconds
+constexpr unsigned updateInterval = 10; // seconds
 static esp32_simple_ota::OTAManager ota {
     MAIN_UPDATE_FEED_URL,
     CURRENT_VERSION,
@@ -53,9 +52,24 @@ static esp32_simple_ota::OTAManager ota {
     [](){ return ovenController.getCurrentState() == OvenController::State::Off; }
 };
 
-static void network_logging_init()
+static void network_logging_init(const char *ip)
 {
     udp_logging_init(CONFIG_LOG_UDP_IP, CONFIG_LOG_UDP_PORT, udp_logging_vprintf);
+    ESP_LOGI(TAG, "Network Logging Started!");
+    ESP_LOGI(TAG, "Device IP Address: %s", ip);
+}
+
+static void hap_oven_initialize(uint8_t *mac)
+{
+    constexpr size_t id_buffer_size = 32;
+    char accessory_id[id_buffer_size] = { 0 };
+    snprintf(accessory_id, id_buffer_size, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    
+    static std::string id {accessory_id};    
+    static OvenControllerHomeKitBridge homekit_oven_controller { id, ovenController };
+
+    ovenController.initialize();
+    homekit_oven_controller.register_accessory();
 }
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
@@ -65,18 +79,20 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         esp_wifi_connect();
         break;
     case SYSTEM_EVENT_STA_GOT_IP:
-        ESP_LOGI(TAG, "got ip:%s",
-                 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+    {
+        char *ip = ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip);
+        ESP_LOGI(TAG, "got ip:%s", ip);
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
         {
-            network_logging_init();
+            network_logging_init(ip);
             uint8_t mac[6];
             esp_wifi_get_mac(ESP_IF_WIFI_STA, mac);
 
-            hap_oven_initialize(ovenController, mac);
             ota.launchTask();
+            hap_oven_initialize(mac);
         }
         break;
+    }
     case SYSTEM_EVENT_STA_DISCONNECTED:
         esp_wifi_connect();
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
@@ -116,7 +132,6 @@ extern "C" void app_main()
 {
     ESP_ERROR_CHECK( nvs_flash_init() );
     //ESP_ERROR_CHECK( nvs_flash_erase() );
-    ovenController.initialize();
 
     wifi_init_sta();
 }
